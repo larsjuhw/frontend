@@ -12,13 +12,49 @@ export const formatDateWeekdayDay = (
 ) => formatDateWeekdayDayMem(locale, config.time_zone).format(dateObj);
 
 const formatDateWeekdayDayMem = memoizeOne(
-  (locale: FrontendLocaleData, serverTimeZone: string) =>
-    new Intl.DateTimeFormat(locale.language, {
+  (locale: FrontendLocaleData, serverTimeZone: string) => {
+    const formatter = new Intl.DateTimeFormat(locale.language, {
       weekday: "long",
       month: "long",
       day: "numeric",
       timeZone: resolveTimeZone(locale.time_zone, serverTimeZone),
-    })
+    });
+
+    if (
+      locale.date_format === DateFormat.language ||
+      locale.date_format === DateFormat.system
+    ) {
+      return formatter;
+    }
+
+    return {
+      format: (dateObj: Date) => {
+        const parts = formatter.formatToParts(dateObj);
+        const weekday = parts.find((part) => part.type === "weekday")?.value;
+        const day = parts.find((part) => part.type === "day")?.value;
+        const month = parts.find((part) => part.type === "month")?.value;
+        const literals = parts
+          .filter((part) => part.type === "literal")
+          .map((part) => part.value);
+
+        let result = `${weekday}`;
+
+        if (literals.length > 0) {
+          result += literals[0];
+        }
+
+        if (locale.date_format === DateFormat.DMY) {
+          result += `${day} ${month}`;
+        } else if (locale.date_format === DateFormat.MDY) {
+          result += `${month} ${day}`;
+        } else if (locale.date_format === DateFormat.YMD) {
+          result += `${month} ${day}`;
+        }
+
+        return result;
+      },
+    };
+  }
 );
 
 // August 10, 2021
@@ -29,13 +65,45 @@ export const formatDate = (
 ) => formatDateMem(locale, config.time_zone).format(dateObj);
 
 const formatDateMem = memoizeOne(
-  (locale: FrontendLocaleData, serverTimeZone: string) =>
-    new Intl.DateTimeFormat(locale.language, {
+  (locale: FrontendLocaleData, serverTimeZone: string) => {
+    const formatter = new Intl.DateTimeFormat(locale.language, {
       year: "numeric",
       month: "long",
       day: "numeric",
       timeZone: resolveTimeZone(locale.time_zone, serverTimeZone),
-    })
+    });
+
+    if (
+      locale.date_format === DateFormat.language ||
+      locale.date_format === DateFormat.system
+    ) {
+      return formatter;
+    }
+
+    return {
+      format: (dateObj: Date) => {
+        const parts = formatter.formatToParts(dateObj);
+        const day = parts.find((part) => part.type === "day")?.value;
+        const month = parts.find((part) => part.type === "month")?.value;
+        const year = parts.find((part) => part.type === "year")?.value;
+        const literals = parts
+          .filter((part) => part.type === "literal")
+          .map((part) => part.value);
+
+        if (locale.date_format === DateFormat.DMY) {
+          return `${day}${literals[0]}${month}${literals[1]}${year}`;
+        }
+        if (locale.date_format === DateFormat.MDY) {
+          return `${month}${literals[0]}${day}${literals[1]}${year}`;
+        }
+        if (locale.date_format === DateFormat.YMD) {
+          return `${year}${literals[0]}${month}${literals[1]}${day}`;
+        }
+
+        return formatter.format(dateObj);
+      },
+    };
+  }
 );
 
 // Aug 10, 2021
@@ -46,13 +114,45 @@ export const formatDateShort = (
 ) => formatDateShortMem(locale, config.time_zone).format(dateObj);
 
 const formatDateShortMem = memoizeOne(
-  (locale: FrontendLocaleData, serverTimeZone: string) =>
-    new Intl.DateTimeFormat(locale.language, {
+  (locale: FrontendLocaleData, serverTimeZone: string) => {
+    const formatter = new Intl.DateTimeFormat(locale.language, {
       year: "numeric",
       month: "short",
       day: "numeric",
       timeZone: resolveTimeZone(locale.time_zone, serverTimeZone),
-    })
+    });
+
+    if (
+      locale.date_format === DateFormat.language ||
+      locale.date_format === DateFormat.system
+    ) {
+      return formatter;
+    }
+
+    return {
+      format: (dateObj: Date) => {
+        const parts = formatter.formatToParts(dateObj);
+        const day = parts.find((part) => part.type === "day")?.value;
+        const month = parts.find((part) => part.type === "month")?.value;
+        const year = parts.find((part) => part.type === "year")?.value;
+        const literals = parts
+          .filter((part) => part.type === "literal")
+          .map((part) => part.value);
+
+        if (locale.date_format === DateFormat.DMY) {
+          return `${day}${literals[0]}${month}${literals[1]}${year}`;
+        }
+        if (locale.date_format === DateFormat.MDY) {
+          return `${month}${literals[0]}${day}${literals[1]}${year}`;
+        }
+        if (locale.date_format === DateFormat.YMD) {
+          return `${year}${literals[0]}${month}${literals[1]}${day}`;
+        }
+
+        return formatter.format(dateObj);
+      },
+    };
+  }
 );
 
 // 10/08/2021
@@ -127,12 +227,43 @@ export const formatDateVeryShort = (
 ) => formatDateVeryShortMem(locale, config.time_zone).format(dateObj);
 
 const formatDateVeryShortMem = memoizeOne(
-  (locale: FrontendLocaleData, serverTimeZone: string) =>
-    new Intl.DateTimeFormat(locale.language, {
+  (locale: FrontendLocaleData, serverTimeZone: string) => {
+    const formatter = new Intl.DateTimeFormat(locale.language, {
       day: "numeric",
       month: "short",
       timeZone: resolveTimeZone(locale.time_zone, serverTimeZone),
-    })
+    });
+
+    if (
+      locale.date_format === DateFormat.language ||
+      locale.date_format === DateFormat.system
+    ) {
+      return formatter;
+    }
+
+    return {
+      format: (dateObj: Date) => {
+        const parts = formatter.formatToParts(dateObj);
+        const day = parts.find((part) => part.type === "day")?.value;
+        const month = parts.find((part) => part.type === "month")?.value;
+        const literals = parts
+          .filter((part) => part.type === "literal")
+          .map((part) => part.value);
+
+        if (locale.date_format === DateFormat.DMY) {
+          return `${day}${literals[0]}${month}`;
+        }
+        if (locale.date_format === DateFormat.MDY) {
+          return `${month}${literals[0]}${day}`;
+        }
+        if (locale.date_format === DateFormat.YMD) {
+          return `${month}${literals[0]}${day}`;
+        }
+
+        return formatter.format(dateObj);
+      },
+    };
+  }
 );
 
 // August 2021

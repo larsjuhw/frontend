@@ -1,6 +1,7 @@
 import type { HassConfig } from "home-assistant-js-websocket";
 import memoizeOne from "memoize-one";
 import type { FrontendLocaleData } from "../../data/translation";
+import { DateFormat } from "../../data/translation";
 import { formatDateNumeric } from "./format_date";
 import { formatTime } from "./format_time";
 import { resolveTimeZone } from "./resolve-time-zone";
@@ -11,7 +12,23 @@ export const formatDateTime = (
   dateObj: Date,
   locale: FrontendLocaleData,
   config: HassConfig
-) => formatDateTimeMem(locale, config.time_zone).format(dateObj);
+) => {
+  const formatter = formatDateTimeMem(locale, config.time_zone);
+
+  if (
+    locale.date_format === DateFormat.language ||
+    locale.date_format === DateFormat.system
+  ) {
+    return formatter.format(dateObj);
+  }
+
+  // For custom date formats, combine date and time parts
+  return `${formatDateNumeric(dateObj, locale, config)}, ${formatTime(
+    dateObj,
+    locale,
+    config
+  )}`;
+};
 
 const formatDateTimeMem = memoizeOne(
   (locale: FrontendLocaleData, serverTimeZone: string) =>
@@ -45,7 +62,23 @@ export const formatShortDateTimeWithYear = (
   dateObj: Date,
   locale: FrontendLocaleData,
   config: HassConfig
-) => formatShortDateTimeWithYearMem(locale, config.time_zone).format(dateObj);
+) => {
+  if (
+    locale.date_format === DateFormat.language ||
+    locale.date_format === DateFormat.system
+  ) {
+    return formatShortDateTimeWithYearMem(locale, config.time_zone).format(
+      dateObj
+    );
+  }
+
+  // For custom date formats, combine date and time parts
+  return `${formatDateNumeric(dateObj, locale, config)}, ${formatTime(
+    dateObj,
+    locale,
+    config
+  )}`;
+};
 
 const formatShortDateTimeWithYearMem = memoizeOne(
   (locale: FrontendLocaleData, serverTimeZone: string) =>
@@ -65,7 +98,38 @@ export const formatShortDateTime = (
   dateObj: Date,
   locale: FrontendLocaleData,
   config: HassConfig
-) => formatShortDateTimeMem(locale, config.time_zone).format(dateObj);
+) => {
+  const formatter = formatShortDateTimeMem(locale, config.time_zone);
+
+  if (
+    locale.date_format === DateFormat.language ||
+    locale.date_format === DateFormat.system
+  ) {
+    return formatter.format(dateObj);
+  }
+
+  const dateParts = formatShortDateTimePartsMem(
+    locale,
+    config.time_zone
+  ).formatToParts(dateObj);
+
+  const month = dateParts.find((part) => part.type === "month")?.value;
+  const day = dateParts.find((part) => part.type === "day")?.value;
+
+  let dateStr: string;
+  switch (locale.date_format) {
+    case DateFormat.DMY:
+      dateStr = `${day} ${month}`;
+      break;
+    case DateFormat.MDY:
+    case DateFormat.YMD:
+    default:
+      dateStr = `${month} ${day}`;
+      break;
+  }
+
+  return `${dateStr}, ${formatTime(dateObj, locale, config)}`;
+};
 
 const formatShortDateTimeMem = memoizeOne(
   (locale: FrontendLocaleData, serverTimeZone: string) =>
@@ -75,6 +139,15 @@ const formatShortDateTimeMem = memoizeOne(
       hour: useAmPm(locale) ? "numeric" : "2-digit",
       minute: "2-digit",
       hourCycle: useAmPm(locale) ? "h12" : "h23",
+      timeZone: resolveTimeZone(locale.time_zone, serverTimeZone),
+    })
+);
+
+const formatShortDateTimePartsMem = memoizeOne(
+  (locale: FrontendLocaleData, serverTimeZone: string) =>
+    new Intl.DateTimeFormat(locale.language, {
+      month: "short",
+      day: "numeric",
       timeZone: resolveTimeZone(locale.time_zone, serverTimeZone),
     })
 );
@@ -96,7 +169,22 @@ export const formatDateTimeWithSeconds = (
   dateObj: Date,
   locale: FrontendLocaleData,
   config: HassConfig
-) => formatDateTimeWithSecondsMem(locale, config.time_zone).format(dateObj);
+) => {
+  if (
+    locale.date_format === DateFormat.language ||
+    locale.date_format === DateFormat.system
+  ) {
+    return formatDateTimeWithSecondsMem(locale, config.time_zone).format(
+      dateObj
+    );
+  }
+
+  const timeParts = formatTimeWithSecondsMem(locale, config.time_zone).format(
+    dateObj
+  );
+
+  return `${formatDateNumeric(dateObj, locale, config)}, ${timeParts}`;
+};
 
 const formatDateTimeWithSecondsMem = memoizeOne(
   (locale: FrontendLocaleData, serverTimeZone: string) =>
@@ -104,6 +192,17 @@ const formatDateTimeWithSecondsMem = memoizeOne(
       year: "numeric",
       month: "long",
       day: "numeric",
+      hour: useAmPm(locale) ? "numeric" : "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: useAmPm(locale) ? "h12" : "h23",
+      timeZone: resolveTimeZone(locale.time_zone, serverTimeZone),
+    })
+);
+
+const formatTimeWithSecondsMem = memoizeOne(
+  (locale: FrontendLocaleData, serverTimeZone: string) =>
+    new Intl.DateTimeFormat(locale.language, {
       hour: useAmPm(locale) ? "numeric" : "2-digit",
       minute: "2-digit",
       second: "2-digit",
