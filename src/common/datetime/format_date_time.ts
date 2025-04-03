@@ -1,6 +1,8 @@
+import { DateTime } from "luxon";
 import type { HassConfig } from "home-assistant-js-websocket";
 import memoizeOne from "memoize-one";
 import type { FrontendLocaleData } from "../../data/translation";
+import { DateFormat } from "../../data/translation";
 import { formatDateNumeric } from "./format_date";
 import { formatTime } from "./format_time";
 import { resolveTimeZone } from "./resolve-time-zone";
@@ -11,20 +13,31 @@ export const formatDateTime = (
   dateObj: Date,
   locale: FrontendLocaleData,
   config: HassConfig
-) => formatDateTimeMem(locale, config.time_zone).format(dateObj);
+) => {
+  const tzString = resolveTimeZone(locale.time_zone, config.time_zone);
+  const dt = DateTime.fromJSDate(dateObj).setZone(tzString);
 
-const formatDateTimeMem = memoizeOne(
-  (locale: FrontendLocaleData, serverTimeZone: string) =>
-    new Intl.DateTimeFormat(locale.language, {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: useAmPm(locale) ? "numeric" : "2-digit",
-      minute: "2-digit",
-      hourCycle: useAmPm(locale) ? "h12" : "h23",
-      timeZone: resolveTimeZone(locale.time_zone, serverTimeZone),
-    })
-);
+  const localeDt = dt.setLocale(locale.language);
+  const timeFormat = useAmPm(locale) ? "h:mm a" : "HH:mm";
+
+  switch (locale.date_format) {
+    case DateFormat.DMY:
+      return `${localeDt.day} ${localeDt.toFormat("MMMM")}, ${localeDt.toFormat("yyyy")}, ${localeDt.toFormat(timeFormat)}`;
+    case DateFormat.MDY:
+      return `${localeDt.toFormat("MMMM")} ${localeDt.day}, ${localeDt.toFormat("yyyy")}, ${localeDt.toFormat(timeFormat)}`;
+    case DateFormat.YMD:
+      return `${localeDt.toFormat("yyyy")}, ${localeDt.toFormat("MMMM")} ${localeDt.day}, ${localeDt.toFormat(timeFormat)}`;
+    default:
+      return localeDt.toLocaleString({
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: useAmPm(locale) ? "numeric" : "2-digit",
+        minute: "2-digit",
+        hourCycle: useAmPm(locale) ? "h12" : "h23",
+      });
+  }
+};
 
 export const formatDateTimeWithBrowserDefaults = (dateObj: Date) =>
   formatDateTimeWithBrowserDefaultsMem().format(dateObj);
@@ -45,39 +58,60 @@ export const formatShortDateTimeWithYear = (
   dateObj: Date,
   locale: FrontendLocaleData,
   config: HassConfig
-) => formatShortDateTimeWithYearMem(locale, config.time_zone).format(dateObj);
+) => {
+  const tzString = resolveTimeZone(locale.time_zone, config.time_zone);
+  const dt = DateTime.fromJSDate(dateObj).setZone(tzString);
 
-const formatShortDateTimeWithYearMem = memoizeOne(
-  (locale: FrontendLocaleData, serverTimeZone: string) =>
-    new Intl.DateTimeFormat(locale.language, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: useAmPm(locale) ? "numeric" : "2-digit",
-      minute: "2-digit",
-      hourCycle: useAmPm(locale) ? "h12" : "h23",
-      timeZone: resolveTimeZone(locale.time_zone, serverTimeZone),
-    })
-);
+  const localeDt = dt.setLocale(locale.language);
+  const timeFormat = useAmPm(locale) ? "h:mm a" : "HH:mm";
+
+  switch (locale.date_format) {
+    case DateFormat.DMY:
+      return `${localeDt.day} ${localeDt.toFormat("MMM")}, ${localeDt.toFormat("yyyy")}, ${localeDt.toFormat(timeFormat)}`;
+    case DateFormat.MDY:
+      return `${localeDt.toFormat("MMM")} ${localeDt.day}, ${localeDt.toFormat("yyyy")}, ${localeDt.toFormat(timeFormat)}`;
+    case DateFormat.YMD:
+      return `${localeDt.toFormat("yyyy")}, ${localeDt.toFormat("MMM")} ${localeDt.day}, ${localeDt.toFormat(timeFormat)}`;
+    default:
+      return localeDt.toLocaleString({
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: useAmPm(locale) ? "numeric" : "2-digit",
+        minute: "2-digit",
+        hourCycle: useAmPm(locale) ? "h12" : "h23",
+      });
+  }
+};
 
 // Aug 9, 8:23 AM
 export const formatShortDateTime = (
   dateObj: Date,
   locale: FrontendLocaleData,
   config: HassConfig
-) => formatShortDateTimeMem(locale, config.time_zone).format(dateObj);
+) => {
+  const tzString = resolveTimeZone(locale.time_zone, config.time_zone);
+  const dt = DateTime.fromJSDate(dateObj).setZone(tzString);
 
-const formatShortDateTimeMem = memoizeOne(
-  (locale: FrontendLocaleData, serverTimeZone: string) =>
-    new Intl.DateTimeFormat(locale.language, {
-      month: "short",
-      day: "numeric",
-      hour: useAmPm(locale) ? "numeric" : "2-digit",
-      minute: "2-digit",
-      hourCycle: useAmPm(locale) ? "h12" : "h23",
-      timeZone: resolveTimeZone(locale.time_zone, serverTimeZone),
-    })
-);
+  const localeDt = dt.setLocale(locale.language);
+  const timeFormat = useAmPm(locale) ? "h:mm a" : "HH:mm";
+
+  switch (locale.date_format) {
+    case DateFormat.DMY:
+      return `${localeDt.day} ${localeDt.toFormat("MMM")}, ${localeDt.toFormat(timeFormat)}`;
+    case DateFormat.MDY:
+    case DateFormat.YMD:
+      return `${localeDt.toFormat("MMM")} ${localeDt.day}, ${localeDt.toFormat(timeFormat)}`;
+    default:
+      return localeDt.toLocaleString({
+        month: "short",
+        day: "numeric",
+        hour: useAmPm(locale) ? "numeric" : "2-digit",
+        minute: "2-digit",
+        hourCycle: useAmPm(locale) ? "h12" : "h23",
+      });
+  }
+};
 
 export const formatShortDateTimeWithConditionalYear = (
   dateObj: Date,
@@ -96,21 +130,29 @@ export const formatDateTimeWithSeconds = (
   dateObj: Date,
   locale: FrontendLocaleData,
   config: HassConfig
-) => formatDateTimeWithSecondsMem(locale, config.time_zone).format(dateObj);
+) => {
+  const tzString = resolveTimeZone(locale.time_zone, config.time_zone);
+  const dt = DateTime.fromJSDate(dateObj).setZone(tzString);
 
-const formatDateTimeWithSecondsMem = memoizeOne(
-  (locale: FrontendLocaleData, serverTimeZone: string) =>
-    new Intl.DateTimeFormat(locale.language, {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: useAmPm(locale) ? "numeric" : "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hourCycle: useAmPm(locale) ? "h12" : "h23",
-      timeZone: resolveTimeZone(locale.time_zone, serverTimeZone),
-    })
-);
+  const localeDt = dt.setLocale(locale.language);
+  const timeFormat = useAmPm(locale) ? "h:mm:ss a" : "HH:mm:ss";
+
+  switch (locale.date_format) {
+    case DateFormat.DMY:
+      return `${localeDt.day} ${localeDt.toFormat("MMMM")}, ${localeDt.toFormat("yyyy")}, ${localeDt.toFormat(timeFormat)}`;
+    case DateFormat.MDY:
+      return `${localeDt.toFormat("MMMM")} ${localeDt.day}, ${localeDt.toFormat("yyyy")}, ${localeDt.toFormat(timeFormat)}`;
+    case DateFormat.YMD:
+      return `${localeDt.toFormat("yyyy")}, ${localeDt.toFormat("MMMM")} ${localeDt.day}, ${localeDt.toFormat(timeFormat)}`;
+    default:
+      return localeDt.toLocaleString({
+        hour: useAmPm(locale) ? "numeric" : "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hourCycle: useAmPm(locale) ? "h12" : "h23",
+      });
+  }
+};
 
 // 9/8/2021, 8:23 AM
 export const formatDateTimeNumeric = (
