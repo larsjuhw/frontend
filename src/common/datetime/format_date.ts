@@ -1,4 +1,5 @@
 import type { HassConfig } from "home-assistant-js-websocket";
+import { DateTime } from "luxon";
 import memoizeOne from "memoize-one";
 import type { FrontendLocaleData } from "../../data/translation";
 import { DateFormat } from "../../data/translation";
@@ -9,51 +10,67 @@ export const formatDateWeekdayDay = (
   dateObj: Date,
   locale: FrontendLocaleData,
   config: HassConfig
-) => formatDateWeekdayDayMem(locale, config.time_zone).format(dateObj);
+) => {
+  const tzString = resolveTimeZone(locale.time_zone, config.time_zone);
+  const dt = DateTime.fromJSDate(dateObj).setZone(tzString);
 
-const formatDateWeekdayDayMem = memoizeOne(
-  (locale: FrontendLocaleData, serverTimeZone: string) =>
-    new Intl.DateTimeFormat(locale.language, {
-      weekday: "long",
-      month: "long",
-      day: "numeric",
-      timeZone: resolveTimeZone(locale.time_zone, serverTimeZone),
-    })
-);
+  const localeDt = dt.setLocale(locale.language);
+  return localeDt.toFormat("EEEE, MMMM d");
+};
 
 // August 10, 2021
 export const formatDate = (
   dateObj: Date,
   locale: FrontendLocaleData,
   config: HassConfig
-) => formatDateMem(locale, config.time_zone).format(dateObj);
+) => {
+  const tzString = resolveTimeZone(locale.time_zone, config.time_zone);
+  const dt = DateTime.fromJSDate(dateObj).setZone(tzString);
 
-const formatDateMem = memoizeOne(
-  (locale: FrontendLocaleData, serverTimeZone: string) =>
-    new Intl.DateTimeFormat(locale.language, {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      timeZone: resolveTimeZone(locale.time_zone, serverTimeZone),
-    })
-);
+  const localeDt = dt.setLocale(locale.language);
+
+  switch (locale.date_format) {
+    case DateFormat.DMY:
+      return `${localeDt.day} ${localeDt.toFormat("MMMM")}, ${localeDt.toFormat("yyyy")}`;
+    case DateFormat.MDY:
+      return `${localeDt.toFormat("MMMM")} ${localeDt.day}, ${localeDt.toFormat("yyyy")}`;
+    case DateFormat.YMD:
+      return `${localeDt.toFormat("yyyy")}, ${localeDt.toFormat("MMMM")} ${localeDt.day}`;
+    default:
+      return localeDt.toLocaleString({
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+  }
+};
 
 // Aug 10, 2021
 export const formatDateShort = (
   dateObj: Date,
   locale: FrontendLocaleData,
   config: HassConfig
-) => formatDateShortMem(locale, config.time_zone).format(dateObj);
+) => {
+  const tzString = resolveTimeZone(locale.time_zone, config.time_zone);
+  const dt = DateTime.fromJSDate(dateObj).setZone(tzString);
 
-const formatDateShortMem = memoizeOne(
-  (locale: FrontendLocaleData, serverTimeZone: string) =>
-    new Intl.DateTimeFormat(locale.language, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      timeZone: resolveTimeZone(locale.time_zone, serverTimeZone),
-    })
-);
+  const localeDt = dt.setLocale(locale.language);
+
+  switch (locale.date_format) {
+    case DateFormat.DMY:
+      return `${localeDt.day} ${localeDt.toFormat("MMM")}, ${localeDt.toFormat("yyyy")}`;
+    case DateFormat.MDY:
+      return `${localeDt.toFormat("MMM")} ${localeDt.day}, ${localeDt.toFormat("yyyy")}`;
+    case DateFormat.YMD:
+      return `${localeDt.toFormat("yyyy")}, ${localeDt.toFormat("MMM")} ${localeDt.day}`;
+    default:
+      return localeDt.toLocaleString({
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+  }
+};
 
 // 10/08/2021
 export const formatDateNumeric = (
@@ -124,32 +141,51 @@ export const formatDateVeryShort = (
   dateObj: Date,
   locale: FrontendLocaleData,
   config: HassConfig
-) => formatDateVeryShortMem(locale, config.time_zone).format(dateObj);
+) => {
+  const tzString = resolveTimeZone(locale.time_zone, config.time_zone);
+  const dt = DateTime.fromJSDate(dateObj).setZone(tzString);
 
-const formatDateVeryShortMem = memoizeOne(
-  (locale: FrontendLocaleData, serverTimeZone: string) =>
-    new Intl.DateTimeFormat(locale.language, {
-      day: "numeric",
-      month: "short",
-      timeZone: resolveTimeZone(locale.time_zone, serverTimeZone),
-    })
-);
+  const localeDt = dt.setLocale(locale.language);
+
+  switch (locale.date_format) {
+    case DateFormat.DMY:
+      return `${localeDt.day} ${localeDt.toFormat("MMM")}`;
+    case DateFormat.MDY:
+      return `${localeDt.toFormat("MMM")} ${localeDt.day}`;
+    case DateFormat.YMD:
+      return `${localeDt.toFormat("MMM")} ${localeDt.day}`;
+    default:
+      return localeDt.toLocaleString({
+        day: "numeric",
+        month: "short",
+      });
+  }
+};
 
 // August 2021
 export const formatDateMonthYear = (
   dateObj: Date,
   locale: FrontendLocaleData,
   config: HassConfig
-) => formatDateMonthYearMem(locale, config.time_zone).format(dateObj);
+) => {
+  const tzString = resolveTimeZone(locale.time_zone, config.time_zone);
+  const dt = DateTime.fromJSDate(dateObj).setZone(tzString);
 
-const formatDateMonthYearMem = memoizeOne(
-  (locale: FrontendLocaleData, serverTimeZone: string) =>
-    new Intl.DateTimeFormat(locale.language, {
-      month: "long",
-      year: "numeric",
-      timeZone: resolveTimeZone(locale.time_zone, serverTimeZone),
-    })
-);
+  const localeDt = dt.setLocale(locale.language);
+
+  switch (locale.date_format) {
+    case DateFormat.DMY:
+    case DateFormat.MDY:
+      return `${localeDt.toFormat("MMMM")} ${localeDt.toFormat("yyyy")}`;
+    case DateFormat.YMD:
+      return `${localeDt.toFormat("yyyy")} ${localeDt.toFormat("MMMM")}`;
+    default:
+      return localeDt.toLocaleString({
+        month: "long",
+        year: "numeric",
+      });
+  }
+};
 
 // August
 export const formatDateMonth = (
