@@ -29,6 +29,7 @@ import { migrateAutomationTrigger } from "./automation";
 import type { BlueprintInput } from "./blueprint";
 import { computeObjectId } from "../common/entity/compute_object_id";
 import { createSearchParam } from "../common/url/search-params";
+import { hasTemplate } from "../common/string/has-template";
 
 export const MODES = ["single", "restart", "queued", "parallel"] as const;
 export const MODES_MAX = ["queued", "parallel"] as const;
@@ -339,6 +340,9 @@ export const getScriptEditorInitData = () => {
 
 export const getActionType = (action: Action): ActionType => {
   // Check based on config_validation.py#determine_script_action
+  if (typeof action === "string" && hasTemplate(action)) {
+    return "check_condition";
+  }
   if ("delay" in action) {
     return "delay";
   }
@@ -473,4 +477,17 @@ export const migrateAutomationAction = (
   }
 
   return action;
+};
+
+export const normalizeScriptConfig = (config: ScriptConfig): ScriptConfig => {
+  // Normalize data: ensure sequence is a list
+  // Happens when people copy paste their scripts into the config
+  const value = config.sequence;
+  if (value && !Array.isArray(value)) {
+    config.sequence = [value];
+  }
+  if (config.sequence) {
+    config.sequence = migrateAutomationAction(config.sequence);
+  }
+  return config;
 };
